@@ -112,7 +112,7 @@ can see here:
 ```
 
 Now, you can notice that we didn't indicate explicitly any visibility for `add`. Therefore,
-the symbol has also be exported, which is the default in GCC:
+the symbol has also been exported, which is the default in GCC:
 
 ```
 0000000000000620 T _Z3addii
