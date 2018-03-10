@@ -180,3 +180,123 @@ has become:
 This means that `add` is now hidden, since we did not explicitly mark it as
 exported. This is the behavior we use on all the other examples in this
 repository.
+
+## 3. Using the shared library in a program
+
+Let's try to use the `foo` library in a `bar` program. We write the following
+`bar.cpp` file:
+
+```
+#include <iostream>
+#include "foo.h"
+
+int main()
+{
+    int a = 5;
+    int b = 3;
+
+    std::cout << "a + b = " << add(a, b) << std::endl;
+    std::cout << "a - b = " << sub(a, b) << std::endl;
+    std::cout << "a * b = " << mult(a, b) << std::endl;
+
+    return 0;
+}
+```
+
+and compile it with:
+
+```
+g++ -o bar bar.cpp -lfoo
+```
+
+Ooops, we get the following errors!
+
+```
+/tmp/cckRuPpH.o: In function `main':
+bar.cpp:(.text+0x22): undefined reference to `add(int, int)'
+bar.cpp:(.text+0x59): undefined reference to `sub(int, int)'
+bar.cpp:(.text+0x90): undefined reference to `mult(int, int)'
+/usr/bin/ld: bar: hidden symbol `_Z4multii' isn't defined
+/usr/bin/ld: final link failed: Bad value
+collect2: error: ld returned 1 exit status
+```
+
+Indeed, we didn't tell GCC where the shared library was, so let's
+add the current directory `$PWD` in the library path, and ask to link with
+the `foo` library:
+
+
+```
+g++ -o bar bar.cpp -L$PWD -lfoo
+```
+
+Ooops, still not happy!
+
+```
+/tmp/ccsEWmn5.o: In function `main':
+bar.cpp:(.text+0x22): undefined reference to `add(int, int)'
+bar.cpp:(.text+0x90): undefined reference to `mult(int, int)'
+/usr/bin/ld: bar: hidden symbol `_Z4multii' isn't defined
+/usr/bin/ld: final link failed: Bad value
+collect2: error: ld returned 1 exit status
+```
+
+Hum, indeed, now GCC can find `sub`, but still can't use `add` and `mult` since
+they are hidden! Of course, in this simple example, we could simply add them to
+the API with `__attribute__ ((visibility ("default")))`, but let's assume that
+we cannot change the `foo` library and that the library author had good reasons
+not to expose these functions. This means that we have no other choice than to
+change our `bar` program:
+
+```
+#include <iostream>
+#include "foo.h"
+
+int main()
+{
+    int a = 5;
+    int b = 3;
+
+    // Can't use add(a, b) and mult(a, b): they're not part of foo's API! :(
+    std::cout << "a + b = " << a + b << std::endl;
+    std::cout << "a - b = " << sub(a, b) << std::endl;
+    std::cout << "a * b = " << a * b << std::endl;
+
+    return 0;
+}
+```
+
+We can now successfully compile using:
+
+```
+g++ -o bar bar.cpp -L$PWD -lfoo
+```
+
+Let's run it!
+
+```
+$ ./bar
+./bar: error while loading shared libraries: libfoo.so: cannot open shared
+object file: No such file or directory
+```
+
+Duh, still an error!
+
+This is because the program needs to load the `foo` shared library at runtime,
+but doesn't know where the library is. In Linux, this is typically done using
+the [`rpath`](https://en.wikipedia.org/wiki/Rpath). In this example, we simply
+adds the current directory to the `rpath` of the `bar` program during
+compilation:
+
+```
+g++ -o bar bar.cpp -L$PWD -lfoo -Wl,-rpath,$PWD
+```
+
+Few, it's finally working!
+
+```
+$ ./bar
+a + b = 8
+a - b = 2
+a * b = 15
+```
