@@ -99,20 +99,21 @@ int mult(int a, int b);
 ```
 
 The "default" visibility means that we want to export the symbol (yes, the
-chosen nomenclature is really confusing, "default" really means "visible"), and
-the "hidden" attribute means that we do not want to export the symbol.
+chosen nomenclature is really confusing, "default" really means "visible", or
+"exported"), and the "hidden" attribute means that we do not want to export the
+symbol.
 
 This explains why `sub` is exported and `mult` is hidden, as we
 can see here:
 
 ```
-0000000000000664 T _Z3subii
-0000000000000676 t _Z4multii
+0000000000000634 T _Z3subii
+0000000000000646 t _Z4multii
 ```
 
 Now, you can notice that we didn't indicate explicitly any visibility for `add`. Therefore,
 the symbol has also be exported, which is the default in GCC:
 
 ```
-0000000000000650 T _Z3addii
+0000000000000620 T _Z3addii
 ```
