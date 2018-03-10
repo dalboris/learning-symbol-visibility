@@ -4,7 +4,7 @@ When creating a shared library in C++, you have the option to "export" or "hide"
 some or all your "symbols". By symbol, we mean a variable, a function, a class
 name, etc. The symbols that are "exported" can be used by clients of the shared
 library, while symbols that are "hidden" cannot be used. This is called "symbol
-visibility". The easiest thing to do is simply to to export all your symbols,
+visibility". The easiest thing to do is simply to export all your symbols,
 which is the default on most compilers. However, this may potentially lead to
 name conflicts and slow load time of the shared library. This is why it is
 generally considered a better practice to hide all your symbols by default, and
