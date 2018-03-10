@@ -83,7 +83,7 @@ What are those, and why are they different? `T` means that the symbol is
 exported (that is, available for clients of the shared library), while `t` means
 that the symbol is hidden (that is, not available for clients of the shared
 library). The reason these three functions don't have the same visibility is
-that foo.h has actually explicitly declared these symbols with different
+that `foo.h` has actually explicitly declared these symbols with different
 visibility. Here is the full content of `foo.h`:
 
 ```
@@ -98,21 +98,20 @@ __attribute__ ((visibility ("hidden")))
 int mult(int a, int b);
 ```
 
-The "default" visibility means that we want to export the symbol (yes, the
+The `"default"` visibility means that we want to export the symbol (yes, the
 chosen nomenclature is really confusing, "default" really means "visible", or
-"exported"), and the "hidden" attribute means that we do not want to export the
-symbol.
+"exported"), and the `"hidden"` attribute means that we do not want to export
+the symbol.
 
-This explains why `sub` is exported and `mult` is hidden, as we
-can see here:
+This explains why `sub` is exported and `mult` is hidden, as we can see here:
 
 ```
 0000000000000634 T _Z3subii
 0000000000000646 t _Z4multii
 ```
 
-Now, you can notice that we didn't indicate explicitly any visibility for `add`. Therefore,
-the symbol has also been exported, which is the default in GCC:
+Now, you can notice that we didn't indicate explicitly any visibility for `add`.
+Therefore, the symbol has also been exported, which is the default in GCC:
 
 ```
 0000000000000620 T _Z3addii
@@ -124,8 +123,8 @@ We have seen that using GCC, by default all symbols are exported unless
 explicitly hidden. However, it is considered a better practice to do the
 opposite: hide everything by default, unless explicitly exported.
 
-We can do this by using the `-fvisibility=hidden` option of GCC both at
-the compiling step and the linking step:
+We can do this by using the `-fvisibility=hidden` option of GCC both at the
+compiling step and the linking step:
 
 ```
 g++ -fvisibility=hidden -c -fPIC -o foo.o foo.cpp
@@ -178,7 +177,6 @@ has become:
 0000000000000600 t _Z3addii
 ```
 
-This means that `add` is now hidden, since we did not explicitly
-mark it as exported. This is the behavior we use on all the other
-examples in this repository.
-
+This means that `add` is now hidden, since we did not explicitly mark it as
+exported. This is the behavior we use on all the other examples in this
+repository.
