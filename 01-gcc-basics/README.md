@@ -117,3 +117,68 @@ the symbol has also been exported, which is the default in GCC:
 ```
 0000000000000620 T _Z3addii
 ```
+
+## 2. Compiling a shared library with -fvisibility=hidden
+
+We have seen that using GCC, by default all symbols are exported unless
+explicitly hidden. However, it is considered a better practice to do the
+opposite: hide everything by default, unless explicitly exported.
+
+We can do this by using the `-fvisibility=hidden` option of GCC both at
+the compiling step and the linking step:
+
+```
+g++ -fvisibility=hidden -c -fPIC -o foo.o foo.cpp
+g++ -fvisibility=hidden -shared -fPIC -o libfoo.so foo.o -lc
+```
+
+The output of `nm` is now the following:
+
+```
+$ nm libfoo.so
+0000000000201020 B __bss_start
+0000000000201020 b completed.7594
+                 w __cxa_finalize
+0000000000000500 t deregister_tm_clones
+0000000000000590 t __do_global_dtors_aux
+0000000000200e78 t __do_global_dtors_aux_fini_array_entry
+0000000000201018 d __dso_handle
+0000000000200e88 d _DYNAMIC
+0000000000201020 D _edata
+0000000000201028 B _end
+000000000000063c T _fini
+00000000000005d0 t frame_dummy
+0000000000200e70 t __frame_dummy_init_array_entry
+0000000000000718 r __FRAME_END__
+0000000000201000 d _GLOBAL_OFFSET_TABLE_
+                 w __gmon_start__
+0000000000000648 r __GNU_EH_FRAME_HDR
+00000000000004c0 T _init
+                 w _ITM_deregisterTMCloneTable
+                 w _ITM_registerTMCloneTable
+0000000000200e80 d __JCR_END__
+0000000000200e80 d __JCR_LIST__
+                 w _Jv_RegisterClasses
+0000000000000540 t register_tm_clones
+0000000000201020 d __TMC_END__
+0000000000000600 t _Z3addii
+0000000000000614 T _Z3subii
+0000000000000626 t _Z4multii
+```
+
+As we can see, besides a few address changes, the only change is that:
+
+```
+0000000000000620 T _Z3addii
+```
+
+has become:
+
+```
+0000000000000600 t _Z3addii
+```
+
+This means that `add` is now hidden, since we did not explicitly
+mark it as exported. This is the behavior we use on all the other
+examples in this repository.
+
