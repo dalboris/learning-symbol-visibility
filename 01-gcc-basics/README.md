@@ -13,7 +13,6 @@ foo.cpp:
 int add(int a, int b);
 int sub(int a, int b);
 int mult(int a, int b);
-
 ```
 
 In order to compile this into a shared library, we need to compile the source
