@@ -66,9 +66,9 @@ $ nm libfoo.so
 Importantly, we can see our three functions `add`, `sub`, and `mult` at the end:
 
 ```
-0000000000000650 T _Z3addii
-0000000000000664 T _Z3subii
-0000000000000676 t _Z4multii
+0000000000000620 T _Z3addii
+0000000000000634 T _Z3subii
+0000000000000646 t _Z4multii
 ```
 
 (Learn about [name mangling](https://en.wikipedia.org/wiki/Name_mangling) if you
