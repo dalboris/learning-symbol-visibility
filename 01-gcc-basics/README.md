@@ -206,7 +206,7 @@ int main()
 and compile it with:
 
 ```
-g++ -o bar bar.cpp -lfoo
+g++ -o bar bar.cpp
 ```
 
 Ooops, we get the following errors!
