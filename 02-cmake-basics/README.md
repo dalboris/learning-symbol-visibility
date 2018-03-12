@@ -403,3 +403,172 @@ __attribute__((visibility("hidden"))) int mult(int a, int b);
 ```
 
 when compiling or using the library.
+
+So without further ado, let's create a program `bar` that uses `foo`! We add the program to the root CMakeLists:
+
+./CMakeLists.txt:
+
+```
+cmake_minimum_required(VERSION 3.1.0)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+add_subdirectory(foo)
+add_subdirectory(bar)
+```
+
+And we create the program like so:
+
+./bar/CMakeLists.txt:
+
+```
+include_directories("${CMAKE_CURRENT_LIST_DIR}/../foo")
+add_executable(bar bar.cpp)
+target_link_libraries(bar foo)
+
+```
+
+./bar/bar.cpp:
+
+
+```
+#include <iostream>
+#include "foo.h"
+
+int main()
+{
+    int a = 5;
+    int b = 3;
+
+    // Can't use add(a, b) and mult(a, b): they're not part of foo's API! :(
+    std::cout << "a + b = " << a + b << std::endl;
+    std::cout << "a - b = " << sub(a, b) << std::endl;
+    std::cout << "a * b = " << a * b << std::endl;
+
+    return 0;
+}
+
+```
+
+Explanations:
+
+- The line `include_directories("${CMAKE_CURRENT_LIST_DIR}/../foo")`
+  tells the compiler to add `../foo/` to the include path, so that
+  we find `foo.h` when compiling `bar.cpp
+
+- The line `add_executable(bar bar.cpp)` tells us to compile `bar.cpp`
+
+- The line `target_link_libraries(bar foo)` tells the linker to link
+  to the `foo` library when compiling `bar`, and to add the path to
+  the `foo` shared library to the rpath of `bar`
+
+Let's compile and run:
+
+```
+$ make
+Scanning dependencies of target foo
+[ 25%] Building CXX object foo/CMakeFiles/foo.dir/foo.cpp.o
+[ 50%] Linking CXX shared library libfoo.so
+[ 50%] Built target foo
+Scanning dependencies of target bar
+[ 75%] Building CXX object bar/CMakeFiles/bar.dir/bar.cpp.o
+[100%] Linking CXX executable bar
+[100%] Built target bar
+
+$ bar/bar
+a + b = 8
+a - b = 2
+a * b = 15
+```
+
+Yeay! As a sanity check, let's also try to use `add(a, b)` in `bar`, which we
+shouldn't be able to do since it is not marked in the API:
+
+```
+std::cout << "a + b = " << add(a, b) << std::endl;
+```
+
+We get the following when running make:
+
+```
+CMakeFiles/bar.dir/bar.cpp.o: In function `main':
+bar.cpp:(.text+0x22): undefined reference to `add(int, int)'
+collect2: error: ld returned 1 exit status
+bar/CMakeFiles/bar.dir/build.make:95: recipe for target 'bar/bar' failed
+make[2]: *** [bar/bar] Error 1
+CMakeFiles/Makefile2:140: recipe for target 'bar/CMakeFiles/bar.dir/all' failed
+make[1]: *** [bar/CMakeFiles/bar.dir/all] Error 2
+Makefile:83: recipe for target 'all' failed
+make: *** [all] Error 2
+```
+
+Indeed, the symbol wasn't exported. And if we try to use `mult(a, b)`, we get:
+
+```
+CMakeFiles/bar.dir/bar.cpp.o: In function `main':
+bar.cpp:(.text+0x88): undefined reference to `mult(int, int)'
+/usr/bin/ld: bar: hidden symbol `_Z4multii' isn't defined
+/usr/bin/ld: final link failed: Bad value
+collect2: error: ld returned 1 exit status
+bar/CMakeFiles/bar.dir/build.make:95: recipe for target 'bar/bar' failed
+make[2]: *** [bar/bar] Error 1
+CMakeFiles/Makefile2:140: recipe for target 'bar/CMakeFiles/bar.dir/all' failed
+make[1]: *** [bar/CMakeFiles/bar.dir/all] Error 2
+Makefile:83: recipe for target 'all' failed
+make: *** [all] Error 2
+```
+
+Indeed, the symbol was hidden.
+
+Note: it is useful to run `make VERBOSE=1` if you want to get the exact gcc
+commands that are run, this allows you to compare with the command used in
+`01-gcc-basics` ans make sure that they are the same :) In my case, I get:
+
+```
+/usr/bin/cmake -H/home/boris/learning-symbol-visibility/02-cmake-basics -B/home/boris/learning-symbol-visibility/02-cmake-basics/build --check-build-system CMakeFiles/Makefile.cmake 0
+/usr/bin/cmake -E cmake_progress_start /home/boris/learning-symbol-visibility/02-cmake-basics/build/CMakeFiles /home/boris/learning-symbol-visibility/02-cmake-basics/build/CMakeFiles/progress.marks
+make -f CMakeFiles/Makefile2 all
+make[1]: Entering directory '/home/boris/learning-symbol-visibility/02-cmake-basics/build'
+make -f foo/CMakeFiles/foo.dir/build.make foo/CMakeFiles/foo.dir/depend
+make[2]: Entering directory '/home/boris/learning-symbol-visibility/02-cmake-basics/build'
+cd /home/boris/learning-symbol-visibility/02-cmake-basics/build && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/boris/learning-symbol-visibility/02-cmake-basics /home/boris/learning-symbol-visibility/02-cmake-basics/foo /home/boris/learning-symbol-visibility/02-cmake-basics/build /home/boris/learning-symbol-visibility/02-cmake-basics/build/foo /home/boris/learning-symbol-visibility/02-cmake-basics/build/foo/CMakeFiles/foo.dir/DependInfo.cmake --color=
+make[2]: Leaving directory '/home/boris/learning-symbol-visibility/02-cmake-basics/build'
+make -f foo/CMakeFiles/foo.dir/build.make foo/CMakeFiles/foo.dir/build
+make[2]: Entering directory '/home/boris/learning-symbol-visibility/02-cmake-basics/build'
+[ 25%] Building CXX object foo/CMakeFiles/foo.dir/foo.cpp.o
+cd /home/boris/learning-symbol-visibility/02-cmake-basics/build/foo && /usr/bin/c++   -DFOO_EXPORTS -Dfoo_EXPORTS  -fPIC -fvisibility=hidden   -o CMakeFiles/foo.dir/foo.cpp.o -c /home/boris/learning-symbol-visibility/02-cmake-basics/foo/foo.cpp
+[ 50%] Linking CXX shared library libfoo.so
+cd /home/boris/learning-symbol-visibility/02-cmake-basics/build/foo && /usr/bin/cmake -E cmake_link_script CMakeFiles/foo.dir/link.txt --verbose=1
+/usr/bin/c++  -fPIC   -shared -Wl,-soname,libfoo.so -o libfoo.so CMakeFiles/foo.dir/foo.cpp.o
+make[2]: Leaving directory '/home/boris/learning-symbol-visibility/02-cmake-basics/build'
+[ 50%] Built target foo
+make -f bar/CMakeFiles/bar.dir/build.make bar/CMakeFiles/bar.dir/depend
+make[2]: Entering directory '/home/boris/learning-symbol-visibility/02-cmake-basics/build'
+cd /home/boris/learning-symbol-visibility/02-cmake-basics/build && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /home/boris/learning-symbol-visibility/02-cmake-basics /home/boris/learning-symbol-visibility/02-cmake-basics/bar /home/boris/learning-symbol-visibility/02-cmake-basics/build /home/boris/learning-symbol-visibility/02-cmake-basics/build/bar /home/boris/learning-symbol-visibility/02-cmake-basics/build/bar/CMakeFiles/bar.dir/DependInfo.cmake --color=
+make[2]: Leaving directory '/home/boris/learning-symbol-visibility/02-cmake-basics/build'
+make -f bar/CMakeFiles/bar.dir/build.make bar/CMakeFiles/bar.dir/build
+make[2]: Entering directory '/home/boris/learning-symbol-visibility/02-cmake-basics/build'
+[ 75%] Building CXX object bar/CMakeFiles/bar.dir/bar.cpp.o
+cd /home/boris/learning-symbol-visibility/02-cmake-basics/build/bar && /usr/bin/c++    -I/home/boris/learning-symbol-visibility/02-cmake-basics/bar/../foo   -o CMakeFiles/bar.dir/bar.cpp.o -c /home/boris/learning-symbol-visibility/02-cmake-basics/bar/bar.cpp
+[100%] Linking CXX executable bar
+cd /home/boris/learning-symbol-visibility/02-cmake-basics/build/bar && /usr/bin/cmake -E cmake_link_script CMakeFiles/bar.dir/link.txt --verbose=1
+/usr/bin/c++      CMakeFiles/bar.dir/bar.cpp.o  -o bar -rdynamic ../foo/libfoo.so -Wl,-rpath,/home/boris/learning-symbol-visibility/02-cmake-basics/build/foo
+make[2]: Leaving directory '/home/boris/learning-symbol-visibility/02-cmake-basics/build'
+[100%] Built target bar
+make[1]: Leaving directory '/home/boris/learning-symbol-visibility/02-cmake-basics/build'
+/usr/bin/cmake -E cmake_progress_start /home/boris/learning-symbol-visibility/02-cmake-basics/build/CMakeFiles 0
+```
+
+In particular:
+
+```
+/usr/bin/c++ -DFOO_EXPORTS -Dfoo_EXPORTS -fPIC -fvisibility=hidden -o [...]/foo.cpp.o -c [...]/foo.cpp
+/usr/bin/c++ -fPIC -shared -Wl,-soname,libfoo.so -o libfoo.so [...]/foo.cpp.o
+/usr/bin/c++ -I/[...]/foo -o [...]/bar.cpp.o -c [...]/bar.cpp
+/usr/bin/c++ [...]/bar.cpp.o -o bar -rdynamic ../foo/libfoo.so -Wl,-rpath,[...]/foo
+```
+
+So we can see that CMake compiled and linked `foo` with the `-fPIC`,
+`-fvisibility=hidden`, and `-shared` options; that it added `foo/` to the
+include path when compiling `bar`, and that it correcly linked to `libfoo.so`
+and added the shared library to the rpath of `bar` :)
+
+This concludes this example!
