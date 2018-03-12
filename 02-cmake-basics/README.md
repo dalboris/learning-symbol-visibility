@@ -351,7 +351,8 @@ compile the library).
 
 Therefore, we will tell our build system to define `FOO_EXPORTS` if and only the
 library is being built. This allows to define `FOO_API` as being equal to
-`DLL_EXPORT` when compiling the library, but being equal to `DLL_IMPORT`
+`DLL_EXPORT` when compiling the library, but being equal to `DLL_IMPORT` when
+using the library.
 
 ./foo/CMakeLists.txt:
 
