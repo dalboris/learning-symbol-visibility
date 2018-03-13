@@ -6,12 +6,15 @@ use it in a program called `bar`.
 
 ## 1. Compiling a shared library
 
-Our library `foo` is made of three functions declared in `foo.h` and defined in
-`foo.cpp`:
+Our library `foo` is made of three functions declared in `foo.h`:
 
 ```
 int add(int a, int b);
+
+__attribute__ ((visibility ("default")))
 int sub(int a, int b);
+
+__attribute__ ((visibility ("hidden")))
 int mult(int a, int b);
 ```
 
@@ -84,19 +87,8 @@ exported (that is, available for clients of the shared library), while `t` means
 that the symbol is hidden (that is, not available for clients of the shared
 library). The reason these three functions don't have the same visibility is
 that `foo.h` has actually explicitly declared these symbols with different
-visibility. Here is the full content of `foo.h`:
-
-```
-#pragma once
-
-int add(int a, int b);
-
-__attribute__ ((visibility ("default")))
-int sub(int a, int b);
-
-__attribute__ ((visibility ("hidden")))
-int mult(int a, int b);
-```
+visibility, this is what `__attribute__ ((visibility ("default")))` and
+`__attribute__ ((visibility ("hidden")))` are for.
 
 The `"default"` visibility means that we want to export the symbol (yes, the
 chosen nomenclature is really confusing, "default" really means "visible", or
